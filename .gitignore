@@ -1,0 +1,21 @@
+# Node
+node_modules/
+.next/
+out/
+dist/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# OS/Editor
+.DS_Store
+.vscode/
