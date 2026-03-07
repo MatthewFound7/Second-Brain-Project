@@ -5,9 +5,11 @@ requires-python = ">=3.12"
 description = ""
 authors = []
 dependencies = [
+    "alembic>=1.18.4",
     "fastapi[standard]>=0.135.0",
-    "pytest>=9.0.2",
-    "ruff>=0.15.4",
+    "psycopg[binary]>=3.3.3",
+    "pydantic-settings>=2.13.1",
+    "sqlalchemy>=2.0.48",
 ]
 
 [tool.ruff]
@@ -20,3 +22,9 @@ ignore = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "ruff>=0.15.4",
+]
