@@ -61,8 +61,6 @@ dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic-settings" },
-    { name = "pytest" },
-    { name = "ruff" },
     { name = "sqlalchemy" },
 ]
 
@@ -78,8 +76,6 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.135.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.3" },
     { name = "pydantic-settings", specifier = ">=2.13.1" },
-    { name = "pytest", specifier = ">=9.0.2" },
-    { name = "ruff", specifier = ">=0.15.4" },
     { name = "sqlalchemy", specifier = ">=2.0.48" },
 ]
 

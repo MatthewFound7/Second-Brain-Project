@@ -14,11 +14,18 @@ dependencies = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
 
-[tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP"]
-ignore = ["E501"]
+[lint]
+# https://docs.astral.sh/ruff/rules/
+select = [
+    "F",    # pyflakes
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "I",    # isort
+]
+ignore = [
+    "E203"  # not PEP8 compliant
+]
 
 [tool.ruff.format]
 quote-style = "double"
