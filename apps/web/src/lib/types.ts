@@ -6,6 +6,12 @@ export type Page = {
   content: Record<string, unknown>;
 };
 
+export type PublicPage = {
+  title: string;
+  slug: string;
+  content: Record<string, unknown>;
+};
+
 export type PageCreate = {
   title: string;
   content: Record<string, unknown>;
