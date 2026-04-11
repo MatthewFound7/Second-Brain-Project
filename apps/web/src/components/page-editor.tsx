@@ -15,17 +15,35 @@ type PageEditorProps = {
   }) => Promise<void>;
 };
 
+function getInitialTitle(page: Page | null): string {
+  return page?.title ?? "";
+}
+
+function getInitialSlug(page: Page | null): string {
+  return page?.slug ?? "";
+}
+
+function getInitialIsPublic(page: Page | null): boolean {
+  return page?.is_public ?? false;
+}
+
+function getInitialContentText(page: Page | null): string {
+  if (page === null) {
+    return "{}";
+  }
+
+  return JSON.stringify(page.content, null, 2);
+}
+
 export function PageEditor({
   page,
   isLoading,
   onSave,
-}: PageEditorProps) {
-  const [title, setTitle] = useState<string>(page?.title ?? "");
-  const [slug, setSlug] = useState<string>(page?.slug ?? "");
-  const [isPublic, setIsPublic] = useState<boolean>(page?.is_public ?? false);
-  const [contentText, setContentText] = useState<string>(
-    JSON.stringify(page?.content ?? {}, null, 2),
-  );
+}: PageEditorProps): React.ReactElement {
+  const [title, setTitle] = useState<string>(() => getInitialTitle(page));
+  const [slug, setSlug] = useState<string>(() => getInitialSlug(page));
+  const [isPublic, setIsPublic] = useState<boolean>(() => getInitialIsPublic(page));
+  const [contentText, setContentText] = useState<string>(() => getInitialContentText(page));
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   async function handleSubmit(event: React.ChangeEvent<HTMLFormElement>): Promise<void> {
@@ -40,6 +58,8 @@ export function PageEditor({
 
     setSaveMessage("Saved");
   }
+
+  const publicUrl = isPublic && slug.trim() !== "" ? `/p/${slug.trim()}` : null;
 
   if (isLoading) {
     return <div className="p-6 text-sm text-gray-500">Loading page...</div>;
@@ -75,6 +95,9 @@ export function PageEditor({
             className="w-full rounded border px-3 py-2"
             placeholder="my-public-page"
           />
+          <p className="mt-2 text-xs text-gray-500">
+            Used for the public URL. Example: /p/my-public-page
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -88,6 +111,20 @@ export function PageEditor({
             Public
           </label>
         </div>
+
+        {publicUrl ? (
+          <div className="rounded bg-gray-50 p-3 text-sm">
+            <span className="font-medium">Public URL:</span>{" "}
+            <a
+              href={publicUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-blue-600 underline"
+            >
+              {publicUrl}
+            </a>
+          </div>
+        ) : null}
 
         <div>
           <label htmlFor="content" className="mb-2 block text-sm font-medium">
