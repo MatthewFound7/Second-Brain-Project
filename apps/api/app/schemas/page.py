@@ -4,7 +4,9 @@ from pydantic import BaseModel, Field
 class PageCreate(BaseModel):
     """Validate payload to create pages."""
     title: str = Field(default="Untitled", max_length=200)
-    content: dict = Field(default_factory=dict)
+    content: dict = Field(
+        default_factory=lambda: {"type": "doc", "blocks": []},
+    )
 
 
 class PageUpdate(BaseModel):
