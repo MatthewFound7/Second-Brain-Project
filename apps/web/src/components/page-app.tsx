@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { PageEditor } from "@/components/page-editor";
 import { PageSidebar } from "@/components/page-sidebar";
 import { createEmptyPageContent, isPageContent } from "@/lib/content";
-import { createPage, getPage, listPages, updatePage } from "@/lib/api";
+import { createPage, deletePage, getPage, listPages, updatePage } from "@/lib/api";
 import type { Page, PageContent } from "@/lib/types";
 
 export function PageApp() {
@@ -16,7 +16,7 @@ export function PageApp() {
   const [isLoadingPage, setIsLoadingPage] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const refreshPages = useCallback(async (): Promise<void> => {
+  const refreshPages = useCallback(async (nextSelectedPageId?: number | null): Promise<void> => {
     try {
       setIsLoadingPages(true);
       setErrorMessage(null);
@@ -31,6 +31,23 @@ export function PageApp() {
       if (nextPages.length === 0) {
         setSelectedPageId(null);
         setSelectedPage(null);
+        return;
+      }
+
+      if (nextSelectedPageId !== undefined) {
+        setSelectedPageId(nextSelectedPageId);
+        return;
+      }
+
+      if (selectedPageId === null) {
+        setSelectedPageId(nextPages[0].id);
+        return;
+      }
+
+      const selectedStillExists = nextPages.some((page) => page.id === selectedPageId);
+
+      if (!selectedStillExists) {
+        setSelectedPageId(nextPages[0].id);
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to load pages");
@@ -67,9 +84,7 @@ export function PageApp() {
         content: createEmptyPageContent(),
       });
 
-      const nextPages = await listPages();
-      setPages(nextPages);
-      setSelectedPageId(newPage.id);
+      await refreshPages(newPage.id);
       setSelectedPage(newPage);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to create page");
@@ -78,6 +93,24 @@ export function PageApp() {
 
   async function handleSelectPage(pageId: number): Promise<void> {
     setSelectedPageId(pageId);
+  }
+
+  async function handleDeletePage(): Promise<void> {
+    if (selectedPageId === null) {
+      return;
+    }
+
+    try {
+      setErrorMessage(null);
+
+      const remainingPages = pages.filter((page) => page.id !== selectedPageId);
+      const nextSelectedPageId = remainingPages.length > 0 ? remainingPages[0].id : null;
+
+      await deletePage(selectedPageId);
+      await refreshPages(nextSelectedPageId);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to delete page");
+    }
   }
 
   async function handleSavePage(updatedFields: {
@@ -121,6 +154,8 @@ export function PageApp() {
   useEffect(() => {
     if (selectedPageId !== null) {
       void loadPage(selectedPageId);
+    } else {
+      setSelectedPage(null);
     }
   }, [selectedPageId]);
 
@@ -145,6 +180,7 @@ export function PageApp() {
           key={selectedPage?.id ?? "empty"}
           page={selectedPage}
           isLoading={isLoadingPage}
+          onDelete={handleDeletePage}
           onSave={handleSavePage}
         />
       </main>
