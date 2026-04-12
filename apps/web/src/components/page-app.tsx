@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { createPage, getPage, listPages, updatePage } from "@/lib/api";
-import type { Page } from "@/lib/types";
 import { PageEditor } from "@/components/page-editor";
 import { PageSidebar } from "@/components/page-sidebar";
+import { createEmptyPageContent, isPageContent } from "@/lib/content";
+import { createPage, getPage, listPages, updatePage } from "@/lib/api";
+import type { Page, PageContent } from "@/lib/types";
 
 export function PageApp() {
   const [pages, setPages] = useState<Page[]>([]);
@@ -42,7 +43,13 @@ export function PageApp() {
     try {
       setIsLoadingPage(true);
       setErrorMessage(null);
+
       const page = await getPage(pageId);
+
+      if (!isPageContent(page.content)) {
+        throw new Error("Page content has an invalid structure");
+      }
+
       setSelectedPage(page);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to load page");
@@ -54,12 +61,10 @@ export function PageApp() {
   async function handleCreatePage(): Promise<void> {
     try {
       setErrorMessage(null);
+
       const newPage = await createPage({
         title: "Untitled",
-        content: {
-          type: "doc",
-          blocks: [],
-        },
+        content: createEmptyPageContent(),
       });
 
       const nextPages = await listPages();
@@ -79,7 +84,7 @@ export function PageApp() {
     title: string;
     slug: string | null;
     is_public: boolean;
-    contentText: string;
+    content: PageContent;
   }): Promise<void> {
     if (selectedPageId === null) {
       return;
@@ -88,13 +93,11 @@ export function PageApp() {
     try {
       setErrorMessage(null);
 
-      const parsedContent = JSON.parse(updatedFields.contentText) as Record<string, unknown>;
-
       const updatedPage = await updatePage(selectedPageId, {
         title: updatedFields.title,
         slug: updatedFields.slug,
         is_public: updatedFields.is_public,
-        content: parsedContent,
+        content: updatedFields.content,
       });
 
       setSelectedPage(updatedPage);

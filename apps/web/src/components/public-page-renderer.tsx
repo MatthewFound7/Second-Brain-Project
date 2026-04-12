@@ -1,68 +1,51 @@
-import React from "react";
-
-type Block = {
-  type?: unknown;
-  text?: unknown;
-  level?: unknown;
-};
+import type { PageBlock, PageContent } from "@/lib/types";
 
 type PublicPageRendererProps = {
-  content: Record<string, unknown>;
+  content: PageContent;
 };
 
-function isBlockArray(value: unknown): value is Block[] {
-  return Array.isArray(value);
-}
-
-function renderBlock(block: Block, index: number): React.ReactNode {
-  const type = typeof block.type === "string" ? block.type : "paragraph";
-  const text = typeof block.text === "string" ? block.text : "";
-
-  if (type === "heading") {
-    const level = typeof block.level === "number" ? block.level : 1;
-
-    if (level === 1) {
+function renderBlock(block: PageBlock, index: number) {
+  if (block.type === "heading") {
+    if (block.level === 1) {
       return (
         <h1 key={index} className="mb-4 text-4xl font-bold">
-          {text}
+          {block.text}
         </h1>
       );
     }
 
-    if (level === 2) {
+    if (block.level === 2) {
       return (
         <h2 key={index} className="mb-3 text-3xl font-semibold">
-          {text}
+          {block.text}
         </h2>
       );
     }
 
     return (
       <h3 key={index} className="mb-3 text-2xl font-semibold">
-        {text}
+        {block.text}
       </h3>
     );
   }
 
   return (
     <p key={index} className="mb-4 leading-7 text-gray-800">
-      {text}
+      {block.text}
     </p>
   );
 }
 
 export function PublicPageRenderer({
   content,
-}: PublicPageRendererProps): React.ReactElement {
-  const blocks = (content as { blocks?: unknown }).blocks;
-
-  if (!isBlockArray(blocks) || blocks.length === 0) {
+}: PublicPageRendererProps) {
+  if (content.blocks.length === 0) {
     return (
-      <div className="p-1 text-sm text-gray-500">
+      <div className="rounded border border-dashed p-6 text-sm text-gray-500">
         This page has no public content yet.
       </div>
     );
   }
 
-  return <div>{blocks.map((block, index) => renderBlock(block, index))}</div>;
+  return <div>{content.blocks.map((block, index) => renderBlock(block, index))}</div>;
 }
