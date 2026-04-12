@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 
 import { PublicPageRenderer } from "@/components/public-page-renderer";
+import { isPageContent } from "@/lib/content";
 import { getPublicPage } from "@/lib/server-api";
+import type { PublicPage } from "@/lib/types";
 
 type PublicPageRouteProps = {
   params: Promise<{
@@ -11,14 +13,18 @@ type PublicPageRouteProps = {
 
 export default async function PublicPageRoute({
   params,
-}: PublicPageRouteProps): Promise<React.ReactElement> {
+}: PublicPageRouteProps) {
   const { slug } = await params;
 
-  let page;
+  let page: PublicPage | null = null;
 
   try {
     page = await getPublicPage(slug);
   } catch {
+    notFound();
+  }
+
+  if (page === null || !isPageContent(page.content)) {
     notFound();
   }
 

@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 
-import type { Page } from "@/lib/types";
+import {
+  createHeadingBlock,
+  createParagraphBlock,
+  isPageContent,
+} from "@/lib/content";
+import type { Page, PageBlock, PageContent } from "@/lib/types";
 
 type PageEditorProps = {
   page: Page | null;
@@ -11,7 +16,7 @@ type PageEditorProps = {
     title: string;
     slug: string | null;
     is_public: boolean;
-    contentText: string;
+    content: PageContent;
   }) => Promise<void>;
 };
 
@@ -27,33 +32,64 @@ function getInitialIsPublic(page: Page | null): boolean {
   return page?.is_public ?? false;
 }
 
-function getInitialContentText(page: Page | null): string {
+function getInitialBlocks(page: Page | null): PageBlock[] {
   if (page === null) {
-    return "{}";
+    return [];
   }
 
-  return JSON.stringify(page.content, null, 2);
+  if (isPageContent(page.content)) {
+    return page.content.blocks;
+  }
+
+  return [];
 }
 
 export function PageEditor({
   page,
   isLoading,
   onSave,
-}: PageEditorProps): React.ReactElement {
+}: PageEditorProps) {
   const [title, setTitle] = useState<string>(() => getInitialTitle(page));
   const [slug, setSlug] = useState<string>(() => getInitialSlug(page));
   const [isPublic, setIsPublic] = useState<boolean>(() => getInitialIsPublic(page));
-  const [contentText, setContentText] = useState<string>(() => getInitialContentText(page));
+  const [blocks, setBlocks] = useState<PageBlock[]>(() => getInitialBlocks(page));
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
-  async function handleSubmit(event: React.ChangeEvent<HTMLFormElement>): Promise<void> {
+  function updateBlock(index: number, updatedBlock: PageBlock): void {
+    setBlocks((currentBlocks) =>
+      currentBlocks.map((block, blockIndex) =>
+        blockIndex === index ? updatedBlock : block,
+      ),
+    );
+  }
+
+  function removeBlock(index: number): void {
+    setBlocks((currentBlocks) =>
+      currentBlocks.filter((_, blockIndex) => blockIndex !== index),
+    );
+  }
+
+  function addParagraphBlock(): void {
+    setBlocks((currentBlocks) => [...currentBlocks, createParagraphBlock("")]);
+  }
+
+  function addHeadingBlock(): void {
+    setBlocks((currentBlocks) => [...currentBlocks, createHeadingBlock("", 1)]);
+  }
+
+  async function handleSubmit(
+    event: React.ChangeEvent<HTMLFormElement>,
+  ): Promise<void> {
     event.preventDefault();
 
     await onSave({
       title,
       slug: slug.trim() === "" ? null : slug.trim(),
       is_public: isPublic,
-      contentText,
+      content: {
+        type: "doc",
+        blocks,
+      },
     });
 
     setSaveMessage("Saved");
@@ -126,16 +162,44 @@ export function PageEditor({
           </div>
         ) : null}
 
-        <div>
-          <label htmlFor="content" className="mb-2 block text-sm font-medium">
-            Content JSON
-          </label>
-          <textarea
-            id="content"
-            value={contentText}
-            onChange={(event) => setContentText(event.target.value)}
-            className="min-h-[400px] w-full rounded border px-3 py-2 font-mono text-sm"
-          />
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Content Blocks</h2>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={addParagraphBlock}
+                className="rounded border px-3 py-2 text-sm hover:bg-gray-50"
+              >
+                Add Paragraph
+              </button>
+              <button
+                type="button"
+                onClick={addHeadingBlock}
+                className="rounded border px-3 py-2 text-sm hover:bg-gray-50"
+              >
+                Add Heading
+              </button>
+            </div>
+          </div>
+
+          {blocks.length === 0 ? (
+            <div className="rounded border border-dashed p-4 text-sm text-gray-500">
+              No content blocks yet. Add a heading or paragraph to start.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {blocks.map((block, index) => (
+                <BlockEditor
+                  key={index}
+                  block={block}
+                  index={index}
+                  onChange={updateBlock}
+                  onRemove={removeBlock}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -148,6 +212,81 @@ export function PageEditor({
           {saveMessage ? <span className="text-sm text-green-700">{saveMessage}</span> : null}
         </div>
       </form>
+    </div>
+  );
+}
+
+type BlockEditorProps = {
+  block: PageBlock;
+  index: number;
+  onChange: (index: number, updatedBlock: PageBlock) => void;
+  onRemove: (index: number) => void;
+};
+
+function BlockEditor({
+  block,
+  index,
+  onChange,
+  onRemove,
+}: BlockEditorProps) {
+  function handleTextChange(text: string): void {
+    onChange(index, {
+      ...block,
+      text,
+    });
+  }
+
+  function handleHeadingLevelChange(level: 1 | 2 | 3): void {
+    if (block.type !== "heading") {
+      return;
+    }
+
+    onChange(index, {
+      ...block,
+      level,
+    });
+  }
+
+  return (
+    <div className="rounded border bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="text-sm font-medium text-gray-700">
+          {block.type === "heading" ? "Heading Block" : "Paragraph Block"}
+        </div>
+        <button
+          type="button"
+          onClick={() => onRemove(index)}
+          className="text-sm text-red-600 hover:underline"
+        >
+          Remove
+        </button>
+      </div>
+
+      {block.type === "heading" ? (
+        <div className="mb-3">
+          <label className="mb-2 block text-sm font-medium">Heading Level</label>
+          <select
+            value={block.level}
+            onChange={(event) =>
+              handleHeadingLevelChange(Number(event.target.value) as 1 | 2 | 3)
+            }
+            className="rounded border px-3 py-2 text-sm"
+          >
+            <option value={1}>H1</option>
+            <option value={2}>H2</option>
+            <option value={3}>H3</option>
+          </select>
+        </div>
+      ) : null}
+
+      <div>
+        <label className="mb-2 block text-sm font-medium">Text</label>
+        <textarea
+          value={block.text}
+          onChange={(event) => handleTextChange(event.target.value)}
+          className="min-h-[120px] w-full rounded border px-3 py-2 text-sm"
+        />
+      </div>
     </div>
   );
 }
