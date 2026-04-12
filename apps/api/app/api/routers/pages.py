@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
@@ -13,7 +14,13 @@ def create_page(payload: PageCreate, db: Session = Depends(get_db)) -> Page:
     """Create a new page."""
     page = Page(title=payload.title, content=payload.content)
     db.add(page)
-    db.commit()
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Slug already exists")
+
     db.refresh(page)
     return page
 
@@ -49,17 +56,23 @@ def update_page(page_id: int, payload: PageUpdate, db: Session = Depends(get_db)
     if payload.slug is not None:
         page.slug = payload.slug
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Slug already exists")
+
     db.refresh(page)
     return page
 
-@router.delete("/{page_id}", response_model=PageOut)
-def delete_page(page_id: int, db: Session = Depends(get_db)) -> Page:
-    """Delete an existing page."""
+
+@router.delete("/{page_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_page(page_id: int, db: Session = Depends(get_db)) -> Response:
+    """Delete a page by id."""
     page = db.get(Page, page_id)
     if page is None:
         raise HTTPException(status_code=404, detail="Page not found")
 
     db.delete(page)
     db.commit()
-    return page
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
