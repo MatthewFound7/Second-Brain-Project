@@ -7,11 +7,13 @@ import {
   createParagraphBlock,
   isPageContent,
 } from "@/lib/content";
+import { normalizeSlug } from "@/lib/slug";
 import type { Page, PageBlock, PageContent } from "@/lib/types";
 
 type PageEditorProps = {
   page: Page | null;
   isLoading: boolean;
+  onDelete: () => Promise<void>;
   onSave: (payload: {
     title: string;
     slug: string | null;
@@ -47,6 +49,7 @@ function getInitialBlocks(page: Page | null): PageBlock[] {
 export function PageEditor({
   page,
   isLoading,
+  onDelete,
   onSave,
 }: PageEditorProps) {
   const [title, setTitle] = useState<string>(() => getInitialTitle(page));
@@ -69,6 +72,34 @@ export function PageEditor({
     );
   }
 
+  function moveBlockUp(index: number): void {
+    if (index === 0) {
+      return;
+    }
+
+    setBlocks((currentBlocks) => {
+      const nextBlocks = [...currentBlocks];
+      const currentBlock = nextBlocks[index];
+      nextBlocks[index] = nextBlocks[index - 1];
+      nextBlocks[index - 1] = currentBlock;
+      return nextBlocks;
+    });
+  }
+
+  function moveBlockDown(index: number): void {
+    setBlocks((currentBlocks) => {
+      if (index >= currentBlocks.length - 1) {
+        return currentBlocks;
+      }
+
+      const nextBlocks = [...currentBlocks];
+      const currentBlock = nextBlocks[index];
+      nextBlocks[index] = nextBlocks[index + 1];
+      nextBlocks[index + 1] = currentBlock;
+      return nextBlocks;
+    });
+  }
+
   function addParagraphBlock(): void {
     setBlocks((currentBlocks) => [...currentBlocks, createParagraphBlock("")]);
   }
@@ -82,9 +113,11 @@ export function PageEditor({
   ): Promise<void> {
     event.preventDefault();
 
+    const normalizedSlug = normalizeSlug(slug);
+
     await onSave({
       title,
-      slug: slug.trim() === "" ? null : slug.trim(),
+      slug: normalizedSlug,
       is_public: isPublic,
       content: {
         type: "doc",
@@ -92,10 +125,23 @@ export function PageEditor({
       },
     });
 
+    setSlug(normalizedSlug ?? "");
     setSaveMessage("Saved");
   }
 
-  const publicUrl = isPublic && slug.trim() !== "" ? `/p/${slug.trim()}` : null;
+  async function handleDeleteClick(): Promise<void> {
+    const confirmed = window.confirm("Are you sure you want to delete this page?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    await onDelete();
+  }
+
+  const normalizedSlug = normalizeSlug(slug);
+  const publicUrl =
+    isPublic && normalizedSlug !== null ? `/p/${normalizedSlug}` : null;
 
   if (isLoading) {
     return <div className="p-6 text-sm text-gray-500">Loading page...</div>;
@@ -132,7 +178,7 @@ export function PageEditor({
             placeholder="my-public-page"
           />
           <p className="mt-2 text-xs text-gray-500">
-            Used for the public URL. Example: /p/my-public-page
+            Normalized preview: {normalizedSlug ?? "(empty)"}
           </p>
         </div>
 
@@ -194,7 +240,11 @@ export function PageEditor({
                   key={index}
                   block={block}
                   index={index}
+                  isFirst={index === 0}
+                  isLast={index === blocks.length - 1}
                   onChange={updateBlock}
+                  onMoveUp={moveBlockUp}
+                  onMoveDown={moveBlockDown}
                   onRemove={removeBlock}
                 />
               ))}
@@ -209,6 +259,13 @@ export function PageEditor({
           >
             Save
           </button>
+          <button
+            type="button"
+            onClick={() => void handleDeleteClick()}
+            className="rounded border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50"
+          >
+            Delete Page
+          </button>
           {saveMessage ? <span className="text-sm text-green-700">{saveMessage}</span> : null}
         </div>
       </form>
@@ -219,16 +276,24 @@ export function PageEditor({
 type BlockEditorProps = {
   block: PageBlock;
   index: number;
+  isFirst: boolean;
+  isLast: boolean;
   onChange: (index: number, updatedBlock: PageBlock) => void;
+  onMoveUp: (index: number) => void;
+  onMoveDown: (index: number) => void;
   onRemove: (index: number) => void;
 };
 
 function BlockEditor({
   block,
   index,
+  isFirst,
+  isLast,
   onChange,
+  onMoveUp,
+  onMoveDown,
   onRemove,
-}: BlockEditorProps) {
+}: BlockEditorProps): React.ReactElement {
   function handleTextChange(text: string): void {
     onChange(index, {
       ...block,
@@ -253,13 +318,32 @@ function BlockEditor({
         <div className="text-sm font-medium text-gray-700">
           {block.type === "heading" ? "Heading Block" : "Paragraph Block"}
         </div>
-        <button
-          type="button"
-          onClick={() => onRemove(index)}
-          className="text-sm text-red-600 hover:underline"
-        >
-          Remove
-        </button>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => onMoveUp(index)}
+            disabled={isFirst}
+            className="rounded border px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Up
+          </button>
+          <button
+            type="button"
+            onClick={() => onMoveDown(index)}
+            disabled={isLast}
+            className="rounded border px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Down
+          </button>
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            className="text-sm text-red-600 hover:underline"
+          >
+            Remove
+          </button>
+        </div>
       </div>
 
       {block.type === "heading" ? (
