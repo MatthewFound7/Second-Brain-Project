@@ -1,6 +1,6 @@
-import type { Page, PageCreate, PageUpdate } from "@/lib/types";
+import type { Page, PageCreate, PageUpdate, PublicPage } from "@/lib/types";
 
-const CLIENT_API_BASE = "/api";
+const API_BASE = "/api";
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -8,11 +8,15 @@ async function handleResponse<T>(response: Response): Promise<T> {
     throw new Error(message || "Request failed");
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
 }
 
 export async function listPages(): Promise<Page[]> {
-  const response = await fetch(`${CLIENT_API_BASE}/pages`, {
+  const response = await fetch(`${API_BASE}/pages`, {
     cache: "no-store",
   });
 
@@ -20,7 +24,7 @@ export async function listPages(): Promise<Page[]> {
 }
 
 export async function getPage(pageId: number): Promise<Page> {
-  const response = await fetch(`${CLIENT_API_BASE}/pages/${pageId}`, {
+  const response = await fetch(`${API_BASE}/pages/${pageId}`, {
     cache: "no-store",
   });
 
@@ -28,7 +32,7 @@ export async function getPage(pageId: number): Promise<Page> {
 }
 
 export async function createPage(payload: PageCreate): Promise<Page> {
-  const response = await fetch(`${CLIENT_API_BASE}/pages`, {
+  const response = await fetch(`${API_BASE}/pages`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -40,7 +44,7 @@ export async function createPage(payload: PageCreate): Promise<Page> {
 }
 
 export async function updatePage(pageId: number, payload: PageUpdate): Promise<Page> {
-  const response = await fetch(`${CLIENT_API_BASE}/pages/${pageId}`, {
+  const response = await fetch(`${API_BASE}/pages/${pageId}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -49,4 +53,18 @@ export async function updatePage(pageId: number, payload: PageUpdate): Promise<P
   });
 
   return handleResponse<Page>(response);
+}
+
+export async function deletePage(pageId: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/pages/${pageId}`, {
+    method: "DELETE",
+  });
+  await handleResponse<void>(response);
+}
+
+export async function getPublicPage(slug: string): Promise<PublicPage> {
+  const response = await fetch(`${API_BASE}/public/${slug}`, {
+    cache: "no-store",
+  });
+  return handleResponse<PublicPage>(response);
 }
