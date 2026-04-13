@@ -1,78 +1,70 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
-from app.models.page import Page
 from app.schemas.page import PageCreate, PageOut, PageUpdate
+from app.services.page_service import (
+    PageSlugConflictError,
+    create_page,
+    delete_page,
+    get_page_by_id,
+    list_pages,
+    update_page,
+)
 
 router = APIRouter()
 
 
 @router.post("", response_model=PageOut)
-def create_page(payload: PageCreate, db: Session = Depends(get_db)) -> Page:
+def create_page_route(payload: PageCreate, db: Session = Depends(get_db)) -> PageOut:
     """Create a new page."""
-    page = Page(title=payload.title, content=payload.content)
-    db.add(page)
-
     try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
+        page = create_page(db, payload)
+    except PageSlugConflictError:
         raise HTTPException(status_code=400, detail="Slug already exists")
 
-    db.refresh(page)
     return page
 
 
 @router.get("", response_model=list[PageOut])
-def list_pages(db: Session = Depends(get_db)) -> list[Page]:
+def list_pages_route(db: Session = Depends(get_db)) -> list[PageOut]:
     """List all pages."""
-    return db.query(Page).order_by(Page.updated_at.desc()).all()
+    return list_pages(db)
 
 
 @router.get("/{page_id}", response_model=PageOut)
-def get_page(page_id: int, db: Session = Depends(get_db)) -> Page:
+def get_page_route(page_id: int, db: Session = Depends(get_db)) -> PageOut:
     """Fetch page by id."""
-    page = db.get(Page, page_id)
+    page = get_page_by_id(db, page_id)
+
     if page is None:
         raise HTTPException(status_code=404, detail="Page not found")
+
     return page
 
 
 @router.put("/{page_id}", response_model=PageOut)
-def update_page(page_id: int, payload: PageUpdate, db: Session = Depends(get_db)) -> Page:
+def update_page_route(page_id: int, payload: PageUpdate, db: Session = Depends(get_db)) -> PageOut:
     """Update an existing page."""
-    page = db.get(Page, page_id)
+    page = get_page_by_id(db, page_id)
+
     if page is None:
         raise HTTPException(status_code=404, detail="Page not found")
 
-    if payload.title is not None:
-        page.title = payload.title
-    if payload.content is not None:
-        page.content = payload.content
-    if payload.is_public is not None:
-        page.is_public = payload.is_public
-    if payload.slug is not None:
-        page.slug = payload.slug
-
     try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
+        return update_page(db, page, payload)
+    except PageSlugConflictError:
         raise HTTPException(status_code=400, detail="Slug already exists")
-
-    db.refresh(page)
-    return page
 
 
 @router.delete("/{page_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_page(page_id: int, db: Session = Depends(get_db)) -> Response:
+def delete_page_route(page_id: int, db: Session = Depends(get_db)) -> Response:
     """Delete a page by id."""
-    page = db.get(Page, page_id)
+    page = get_page_by_id(db, page_id)
+
     if page is None:
         raise HTTPException(status_code=404, detail="Page not found")
 
-    db.delete(page)
-    db.commit()
+    delete_page(db, page)
+
     return Response(status_code=status.HTTP_204_NO_CONTENT)
