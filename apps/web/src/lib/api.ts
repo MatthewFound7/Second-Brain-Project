@@ -2,10 +2,27 @@ import type { Page, PageCreate, PageUpdate, PublicPage } from "@/lib/types";
 
 const API_BASE = "/api";
 
+async function readErrorMessage(response: Response): Promise<string> {
+  const contentType = response.headers.get("content-type");
+
+  if (contentType?.includes("application/json")) {
+    const data = (await response.json()) as { detail?: unknown };
+
+    if (typeof data.detail === "string") {
+      return data.detail;
+    }
+
+    return "Request failed";
+  }
+
+  const text = await response.text();
+  return text || "Request failed";
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || "Request failed");
+    const message = await readErrorMessage(response);
+    throw new Error(message);
   }
 
   if (response.status === 204) {
