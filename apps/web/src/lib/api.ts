@@ -1,5 +1,10 @@
 import type { Page, PageCreate, PageUpdate, PublicPage } from "@/lib/types";
 
+export type AuthUser = {
+  id: number;
+  email: string;
+};
+
 const API_BASE = "/api";
 
 async function readErrorMessage(response: Response): Promise<string> {
@@ -30,6 +35,52 @@ async function handleResponse<T>(response: Response): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+export async function registerUser(payload: {
+  email: string;
+  password: string;
+}): Promise<AuthUser> {
+  const response = await fetch(`${API_BASE}/auth/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return handleResponse<AuthUser>(response);
+}
+
+export async function loginUser(payload: {
+  email: string;
+  password: string;
+}): Promise<AuthUser> {
+  const response = await fetch(`${API_BASE}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return handleResponse<AuthUser>(response);
+}
+
+export async function logoutUser(): Promise<void> {
+  const response = await fetch(`${API_BASE}/auth/logout`, {
+    method: "POST",
+  });
+
+  await handleResponse<void>(response);
+}
+
+export async function getCurrentUser(): Promise<AuthUser> {
+  const response = await fetch(`${API_BASE}/auth/me`, {
+    cache: "no-store",
+  });
+
+  return handleResponse<AuthUser>(response);
 }
 
 export async function listPages(): Promise<Page[]> {
