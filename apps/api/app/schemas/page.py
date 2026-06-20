@@ -3,7 +3,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.core.slug import normalize_slug
+from apps.api.app.core.slug import normalize_slug
+
 
 SlugStr = Annotated[str, Field(min_length=1, max_length=200)]
 
