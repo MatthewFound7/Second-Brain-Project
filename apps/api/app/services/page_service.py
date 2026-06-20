@@ -2,6 +2,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.page import Page
+from app.models.user import User
 from app.schemas.page import PageCreate, PageUpdate
 
 
@@ -9,9 +10,10 @@ class PageSlugConflictError(Exception):
     """Raised when a slug already exists."""
 
 
-def create_page(db: Session, payload: PageCreate) -> Page:
+def create_page(db: Session, owner: User, payload: PageCreate) -> Page:
     """Create and persist a page."""
     page = Page(
+        owner_id=owner.id,
         title=payload.title,
         content=payload.content.model_dump(),
     )
@@ -28,14 +30,23 @@ def create_page(db: Session, payload: PageCreate) -> Page:
     return page
 
 
-def list_pages(db: Session) -> list[Page]:
-    """Return all pages ordered by update time."""
-    return db.query(Page).order_by(Page.updated_at.desc()).all()
+def list_pages(db: Session, owner: User) -> list[Page]:
+    """Return all owned pages ordered by update time."""
+    return (
+        db.query(Page)
+        .filter(Page.owner_id == owner.id)
+        .order_by(Page.updated_at.desc())
+        .all()
+    )
 
 
-def get_page_by_id(db: Session, page_id: int) -> Page | None:
-    """Fetch page by id."""
-    return db.get(Page, page_id)
+def get_page_by_id(db: Session, owner: User, page_id: int) -> Page | None:
+    """Fetch owned page by id."""
+    return (
+        db.query(Page)
+        .filter(Page.id == page_id, Page.owner_id == owner.id)
+        .first()
+    )
 
 
 def update_page(db: Session, page: Page, payload: PageUpdate) -> Page:
