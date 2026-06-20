@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routers.auth import router as auth_router
 from app.api.routers.health import router as health_router
 from app.api.routers.pages import router as pages_router
 from app.api.routers.public import router as public_router
@@ -21,7 +20,6 @@ def create_app() -> FastAPI:
     )
 
     application.include_router(health_router)
-    application.include_router(auth_router, prefix="/auth", tags=["auth"])
     application.include_router(pages_router, prefix="/pages", tags=["pages"])
     application.include_router(public_router, tags=["public"])
     return application
