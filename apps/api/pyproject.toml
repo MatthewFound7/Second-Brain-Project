@@ -7,25 +7,21 @@ authors = []
 dependencies = [
     "alembic>=1.18.4",
     "fastapi[standard]>=0.135.0",
-    "jwt>=1.4.0",
-    "passlib>=1.7.4",
     "psycopg[binary]>=3.3.3",
     "pydantic-settings>=2.13.1",
-    "python-jose[cryptography]>=3.5.0",
     "sqlalchemy>=2.0.48",
 ]
 
 [tool.ruff]
 line-length = 100
 
-[tool.ruff.lint]
+[lint]
 # https://docs.astral.sh/ruff/rules/
 select = [
     "F",    # pyflakes
     "E",    # pycodestyle errors
-    "W",    # pycodestyle warnings (includes W292)
+    "W",    # pycodestyle warnings
     "I",    # isort
-    "W292", # enforce newline at end of file
 ]
 ignore = [
     "E203"  # not PEP8 compliant
