@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.auth_dependencies import get_current_user
 from app.api.dependencies import get_db
-from app.models.user import User
 from app.schemas.page import PageCreate, PageOut, PageUpdate
 from app.services.page_service import (
     PageSlugConflictError,
@@ -18,14 +16,10 @@ router = APIRouter()
 
 
 @router.post("", response_model=PageOut)
-def create_page_route(
-    payload: PageCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> PageOut:
-    """Create a new owned page."""
+def create_page_route(payload: PageCreate, db: Session = Depends(get_db)) -> PageOut:
+    """Create a new page."""
     try:
-        page = create_page(db, current_user, payload)
+        page = create_page(db, payload)
     except PageSlugConflictError:
         raise HTTPException(status_code=400, detail="Slug already exists")
 
@@ -33,22 +27,15 @@ def create_page_route(
 
 
 @router.get("", response_model=list[PageOut])
-def list_pages_route(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> list[PageOut]:
-    """List owned pages."""
-    return list_pages(db, current_user)
+def list_pages_route(db: Session = Depends(get_db)) -> list[PageOut]:
+    """List all pages."""
+    return list_pages(db)
 
 
 @router.get("/{page_id}", response_model=PageOut)
-def get_page_route(
-    page_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> PageOut:
-    """Fetch owned page by id."""
-    page = get_page_by_id(db, current_user, page_id)
+def get_page_route(page_id: int, db: Session = Depends(get_db)) -> PageOut:
+    """Fetch page by id."""
+    page = get_page_by_id(db, page_id)
 
     if page is None:
         raise HTTPException(status_code=404, detail="Page not found")
@@ -57,14 +44,9 @@ def get_page_route(
 
 
 @router.put("/{page_id}", response_model=PageOut)
-def update_page_route(
-    page_id: int,
-    payload: PageUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> PageOut:
-    """Update an owned page."""
-    page = get_page_by_id(db, current_user, page_id)
+def update_page_route(page_id: int, payload: PageUpdate, db: Session = Depends(get_db)) -> PageOut:
+    """Update an existing page."""
+    page = get_page_by_id(db, page_id)
 
     if page is None:
         raise HTTPException(status_code=404, detail="Page not found")
@@ -76,16 +58,13 @@ def update_page_route(
 
 
 @router.delete("/{page_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_page_route(
-    page_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> Response:
-    """Delete an owned page."""
-    page = get_page_by_id(db, current_user, page_id)
+def delete_page_route(page_id: int, db: Session = Depends(get_db)) -> Response:
+    """Delete a page by id."""
+    page = get_page_by_id(db, page_id)
 
     if page is None:
         raise HTTPException(status_code=404, detail="Page not found")
 
     delete_page(db, page)
+
     return Response(status_code=status.HTTP_204_NO_CONTENT)
