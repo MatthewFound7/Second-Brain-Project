@@ -1,12 +1,11 @@
 from datetime import UTC, datetime, timedelta
 
-import jwt
-from jose import JWTError
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.settings import get_settings
 
-password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+password_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
